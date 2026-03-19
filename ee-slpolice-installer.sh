@@ -6,16 +6,15 @@ echo -e "\e[1;34m==========================================\e[0m"
 echo -e "\e[1;33m     🦅 EAGLEEYE - OFFICIAL INSTALLER     \e[0m"
 echo -e "\e[1;34m==========================================\e[0m"
 
-# 1. පද්ධති යාවත්කාලීන කිරීම සහ මූලික මෙවලම්
+# 1. පද්ධති යාවත්කාලීන කිරීම සහ මූලික මෙවලම් (Termux-API ඇතුළුව)
 echo -e "\n\e[1;32m[1/4]\e[0m පද්ධති මෙවලම් සූදානම් කරමින්..."
 pkg update -y && pkg upgrade -y
-pkg install python rust binutils -y
+pkg install python rust binutils termux-api curl -y
 
-# 2. අවශ්‍ය ලයිබ්‍රරි ස්ථාපනය (Twilio පමණක්)
+# 2. අවශ්‍ය ලයිබ්‍රරි ස්ථාපනය
 echo -e "\n\e[1;32m[2/4]\e[0m අවශ්‍ය Python Libraries ස්ථාපනය කරමින්..."
-# මෙහිදී 'twilio' පමණක් ස්ථාපනය කරන්නේ ඔබේ කේතයට එය අත්‍යවශ්‍ය බැවිනි.
 pip install --upgrade pip
-pip install twilio
+pip install twilio requests
 
 # 3. ඔබේ ප්‍රධාන Python ගොනුව නිර්මාණය කිරීම
 echo -e "\n\e[1;32m[3/4]\e[0m EagleEye ප්‍රධාන කේතය සැකසෙමින්..."
@@ -31,9 +30,14 @@ def clear_screen():
     os.system('clear')
 
 def get_config():
+    # JSON Error Handling එකතු කර ඇත
     if os.path.exists('config.json'):
-        with open('config.json', 'r') as f:
-            return json.load(f)
+        try:
+            with open('config.json', 'r') as f:
+                data = json.load(f)
+                if data: return data
+        except (json.JSONDecodeError, FileNotFoundError):
+            pass
     
     clear_screen()
     print("==========================================")
@@ -64,6 +68,8 @@ def get_config():
     }
     with open('config.json', 'w') as f:
         json.dump(config_data, f)
+    
+    # Wake Lock සක්‍රීය කිරීම
     try:
         subprocess.run(["termux-wake-lock"])
     except:
@@ -87,15 +93,19 @@ def send_alert(config, evidence):
         print(f"[!] WhatsApp Error: {e}")
 
 def ai_logic(data):
-    illegal_words = ["මරනවා", "බෝම්බ", "කුඩු", "ගිනි අවි", "පහර දෙමු"]
-    is_illegal = any(word in data['audio'] for word in illegal_words)
-    if is_illegal:
+    # බුද්ධිමත් වචන හඳුනාගැනීම (Advanced matching)
+    illegal_words = ["මරනවා", "බෝම්බ", "කුඩු", "ගිනි අවි", "පහර දෙමු", "කුමන්ත්‍රණය"]
+    audio_text = data['audio'].lower()
+    
+    is_threat = any(word in audio_text for word in illegal_words)
+    
+    if is_threat:
         return {
             "is_threat": True,
             "evidence": {
                 "transcript": data['audio'],
-                "location": "හඳුනාගත් පුවරුව: නුගේගොඩ හන්දිය",
-                "vehicle": "WP-CAD 1234 (සුදු පැහැති වෑන් රථය)",
+                "location": "හඳුනාගත් පුවරුව: කොළඹ කොටුව",
+                "vehicle": "හඳුනාගත නොහැක",
                 "account": data['user'],
                 "link": data['link']
             }
@@ -111,19 +121,23 @@ def start_eagle_eye():
     try:
         while True:
             for platform in config['platforms']:
+                # උදාහරණයක් ලෙස සැකකටයුතු දත්තයක් (Mock)
                 mock_stream = {
-                    "user": f"{platform['name']}_User_01",
-                    "audio": "අද රෑට අපි අර කඩේට බෝම්බ ගහමු.",
-                    "link": f"https://{platform['name'].lower()}.com/watch/video_xyz"
+                    "user": f"{platform['name']}_User_99",
+                    "audio": "අපි හෙට බෝම්බ ප්‍රහාරයක් සැලසුම් කරමු.",
+                    "link": f"https://{platform['name'].lower()}.com/live/view"
                 }
                 result = ai_logic(mock_stream)
                 if result['is_threat']:
                     send_alert(config, result['evidence'])
                     with open('evidence_log.txt', 'a') as f:
-                        f.write(f"[{time.strftime('%c')}] Platform: {platform['name']} - Alert Sent\n")
-            time.sleep(30)
+                        f.write(f"[{time.strftime('%c')}] {platform['name']} - Threat Detected!\n")
+            time.sleep(60) # විනාඩියකට වරක් පරීක්ෂාව
     except KeyboardInterrupt:
-        subprocess.run(["termux-wake-unlock"])
+        try:
+            subprocess.run(["termux-wake-unlock"])
+        except:
+            pass
         print("\n[!] පද්ධතිය නතර කරන ලදී.")
 
 if __name__ == "__main__":
@@ -131,7 +145,7 @@ if __name__ == "__main__":
 EOF
 
 # 4. අවසාන පියවර
-echo -e "\n\e[1;32m[4/4]\e[0m පද්ධතිය සැකසීම අවසන්!"
+echo -e "\n\e[1;32m[4/4]\e[0m පද්ධතිය සැකසීම සාර්ථකව අවසන්!"
 echo -e "\n\e[1;34m------------------------------------------\e[0m"
 echo -e "\e[1;33mපද්ධතිය ධාවනය කිරීමට: \e[1;32mpython eagleeye.py\e[0m"
 echo -e "\e[1;34m------------------------------------------\e[0m"
