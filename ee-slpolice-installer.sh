@@ -13,7 +13,6 @@ pkg install python rust binutils termux-api curl -y
 
 # 2. අවශ්‍ය ලයිබ්‍රරි ස්ථාපනය
 echo -e "\n\e[1;32m[2/4]\e[0m අවශ්‍ය Python Libraries ස්ථාපනය කරමින්..."
-pip install --upgrade pip
 pip install twilio requests
 
 # 3. ඔබේ ප්‍රධාන Python ගොනුව නිර්මාණය කිරීම
